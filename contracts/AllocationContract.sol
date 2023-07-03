@@ -28,8 +28,6 @@ contract AllocationContract is IAccount, IERC1271 {
 
     bytes4 constant EIP1271_SUCCESS_RETURN_VALUE = 0x1626ba7e;
     
-    event amountXXXXXXX(uint256 amount);
-
     modifier onlyBootloader() {
         require(
             msg.sender == BOOTLOADER_FORMAL_ADDRESS,
@@ -118,17 +116,24 @@ contract AllocationContract is IAccount, IERC1271 {
         }
     }
     
-    function forward(address tokenAddress) public {
-        uint256 balance = IERC20(tokenAddress).balanceOf(address(this));
-        IERC20(tokenAddress).transfer(owner1, Math.mulDiv(balance, allocation1, 100));
-        IERC20(tokenAddress).transfer(owner2, Math.mulDiv(balance, allocation2, 100));
+    function forward(address tokenAddress) external {
+        if(tokenAddress == 0x000000000000000000000000000000000000800A) {
+            // calculate amount for each owner based on the allocation percentage
+            uint256 amount1 = Math.mulDiv(address(this).balance, allocation1, 100);
+            uint256 amount2 = Math.mulDiv(address(this).balance, allocation2, 100);
+            
+            (bool success1, ) = payable(owner1).call{value: amount1}("");
+            require(success1, "ETH withdrawal failed for owner1");
+            
+            (bool success2, ) = payable(owner2).call{value: amount2}("");
+            require(success2, "ETH withdrawal failed for owner2");
+        } else {
+            uint256 balance = IERC20(tokenAddress).balanceOf(address(this));
+            IERC20(tokenAddress).transfer(owner1, Math.mulDiv(balance, allocation1, 100));
+            IERC20(tokenAddress).transfer(owner2, Math.mulDiv(balance, allocation2, 100));
+        }
     }
     
-    function forwardEth() public {
-        (bool success1, ) = payable(owner1).call{value: 1000000000000000}("");
-        require(success1, "ETH withdrawal failed for owner1");
-    }
-
     function executeTransactionFromOutside(Transaction calldata _transaction)
         external
         payable
@@ -266,17 +271,5 @@ contract AllocationContract is IAccount, IERC1271 {
     receive() external payable {
         // If the contract is called directly, behave like an EOA.
         // Note, that is okay if the bootloader sends funds with no calldata as it may be used for refunds/operator payments
-        
-        // calculate amount for each owner based on the allocation percentage
-        uint256 amount1 = Math.mulDiv(msg.value, allocation1, 100);
-        uint256 amount2 = Math.mulDiv(msg.value, allocation2, 100);
-        
-        emit amountXXXXXXX(amount1);
-        
-        (bool success1, ) = payable(owner1).call{value: amount1}("");
-        require(success1, "ETH withdrawal failed for owner1");
-        
-        (bool success2, ) = payable(owner2).call{value: amount2}("");
-        require(success2, "ETH withdrawal failed for owner2");
     }
 }
