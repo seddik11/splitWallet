@@ -5,38 +5,24 @@ import { Deployer } from '@matterlabs/hardhat-zksync-deploy';
 
 export default async function (hre: HardhatRuntimeEnvironment) {
   // Private key of the account used to deploy
-  const wallet = new Wallet('0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110');
+  const wallet = new Wallet('0xcc1149669c0f288ae228c316d93a8fd39b766a7d5ac3f41054f74e4ee7f1a09c');
   const deployer = new Deployer(hre, wallet);
   const factoryArtifact = await deployer.loadArtifact('AAFactory');
-  const aaArtifact = await deployer.loadArtifact('TwoUserMultisig');
+  const aaArtifact = await deployer.loadArtifact('SplitWallet');
   
   // Getting the bytecodeHash of the account
   const bytecodeHash = utils.hashBytecode(aaArtifact.bytecode);
-  
-//   const deploymentFee = await deployer.estimateDeployFee(factoryArtifact, [bytecodeHash]);
-  
-//   // OPTIONAL: Deposit funds to L2
-//   // Comment this block if you already have funds on zkSync.
-//   const depositHandle = await deployer.zkWallet.deposit({
-//     to: deployer.zkWallet.address,
-//     token: utils.ETH_ADDRESS,
-//     amount: deploymentFee.mul(2),
-//   });
-//   // Wait until the deposit is processed on zkSync
-//   await depositHandle.wait();
 
   const factory = await deployer.deploy(
     factoryArtifact,
     [bytecodeHash],
     undefined,
     [
-      // Since the factory requires the code of the multisig to be available,
-      // we should pass it here as well.
       aaArtifact.bytecode,
     ]
   );
 
   console.log(`AA factory address: ${factory.address}`);
 //   AA factory address
-//   0x5fE58d975604E6aF62328d9E505181B94Fc0718C
+//   0xbB89aF8bF49680f155c6Ce94743828bA293F3957
 }

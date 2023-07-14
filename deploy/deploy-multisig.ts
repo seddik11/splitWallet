@@ -3,12 +3,12 @@ import * as ethers from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 // Put the address of your AA factory
-const AA_FACTORY_ADDRESS = '0x5fE58d975604E6aF62328d9E505181B94Fc0718C';
+const AA_FACTORY_ADDRESS = '0xbB89aF8bF49680f155c6Ce94743828bA293F3957';
 
 export default async function (hre: HardhatRuntimeEnvironment) {
   const provider = new Provider(hre.config.networks.zkSyncLocal.url);
   // Private key of the account used to deploy
-  const wallet = new Wallet('0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110').connect(provider);
+  const wallet = new Wallet('0xcc1149669c0f288ae228c316d93a8fd39b766a7d5ac3f41054f74e4ee7f1a09c').connect(provider);
   const factoryArtifact = await hre.artifacts.readArtifact('AAFactory');
 
   const aaFactory = new ethers.Contract(

@@ -7,15 +7,15 @@ import { Deployer } from "@matterlabs/hardhat-zksync-deploy";
 export default async function (hre: HardhatRuntimeEnvironment) {
   const provider = new Provider("https://testnet.era.zksync.dev");
   // Private key of the account used to deploy
-  const wallet = new Wallet("0x2dcece1d3d7cf63d96c951b51f26b18552cac7cc1e5c3cfa2bf596285ce6ae4f").connect(provider);
+  const wallet = new Wallet("0xcc1149669c0f288ae228c316d93a8fd39b766a7d5ac3f41054f74e4ee7f1a09c").connect(provider);
   
-  // await (
-  //   await wallet.sendTransaction({
-  //     to: '0x09e626AC7422597415F75946eE39a97d0c281b07',
-  //     // You can increase the amount of ETH sent to the multisig
-  //     value: ethers.utils.parseEther("0.34"),
-  //   })
-  // ).wait();
+  await (
+    await wallet.sendTransaction({
+      to: '0x621698EfE5F6F936591B0e0CA1dC6b8746d2dA20',
+      // You can increase the amount of ETH sent to the multisig
+      value: ethers.utils.parseEther("0.35"),
+    })
+  ).wait();
   
   console.log(ethers.utils.parseEther("0.00000000002"));
 }

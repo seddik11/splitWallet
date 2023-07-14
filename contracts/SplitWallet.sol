@@ -5,7 +5,9 @@ import "@matterlabs/zksync-contracts/l2/system-contracts/interfaces/IAccount.sol
 import "@matterlabs/zksync-contracts/l2/system-contracts/libraries/TransactionHelper.sol";
 
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@matterlabs/zksync-contracts/l2/system-contracts/openzeppelin/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 // Used for signature validation
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -15,6 +17,9 @@ import "@matterlabs/zksync-contracts/l2/system-contracts/Constants.sol";
 // to call non-view function of system contracts
 import "@matterlabs/zksync-contracts/l2/system-contracts/libraries/SystemContractsCaller.sol";
 
+// Split wallet must implement withdraw interface
+import "./IWithdraw.sol";
+
 contract SplitWallet is IAccount, IERC1271 {
     // to get transaction hash
     using TransactionHelper for Transaction;
@@ -22,13 +27,13 @@ contract SplitWallet is IAccount, IERC1271 {
     // state variables for account owners
     address public owner1;
     address public owner2;
-    uint256 public percentage1;
-    uint256 public percentage2;
-    uint256 public allocation1;
+    uint256 public allocation1; // in percentage
     uint256 public allocation2;
+    address public botManager;
+    uint256 public bounty;
 
     bytes4 constant EIP1271_SUCCESS_RETURN_VALUE = 0x1626ba7e;
-
+    
     modifier onlyBootloader() {
         require(
             msg.sender == BOOTLOADER_FORMAL_ADDRESS,
@@ -38,11 +43,22 @@ contract SplitWallet is IAccount, IERC1271 {
         _;
     }
 
-    constructor(address _owner1, address _owner2, uint256 _allocation1, uint256 _allocation2) {
+    modifier onlyAccount() {
+        require(
+            msg.sender == address(this),
+            "Only the account that inherits this contract can call this method."
+        );
+        _;
+    }
+
+    constructor(address _owner1, address _owner2, address _botManager, uint256 _allocation1, uint256 _allocation2, uint256 _bounty) {
         owner1 = _owner1;
         owner2 = _owner2;
         allocation1 = _allocation1;
         allocation2 = _allocation2;
+        botManager = _botManager;
+        require(_bounty >= 1, "minimum bounty is 1 percent");
+        bounty = _bounty;
     }
 
     function validateTransaction(
@@ -82,20 +98,11 @@ contract SplitWallet is IAccount, IERC1271 {
         uint256 totalRequiredBalance = _transaction.totalRequiredBalance();
         require(totalRequiredBalance <= address(this).balance, "Not enough balance for fee + value");
 
-        magic = bytes4(0);
-        
-        if (isValidSignature(txHash, _transaction.signature) == EIP1271_SUCCESS_RETURN_VALUE || ) {
+        if (isValidSignature(txHash, _transaction.signature) == EIP1271_SUCCESS_RETURN_VALUE) {
             magic = ACCOUNT_VALIDATION_SUCCESS_MAGIC;
+        } else {
+            magic = bytes4(0);
         }
-        
-        // If eth is sent
-        // check if signed by one of owners
-        // uint128 value = Utils.safeCastToU128(_transaction.value);
-        // if(value > 0) {
-        //    if(_isSignedByOwner(txHash, _transaction.signature)) {
-        //        magic = ACCOUNT_VALIDATION_SUCCESS_MAGIC;
-        //    }
-        // }
     }
 
     function executeTransaction(
@@ -125,49 +132,39 @@ contract SplitWallet is IAccount, IERC1271 {
             require(success);
         }
     }
-    
-    function withdraw() external {
-        require(msg.sender == owner1 || msg.sender == owner2, "Only AA or Owner can call this method");
-        
-        // calculate amount
-        uint256 allocation = allocation1;
-        allocation1 = 0;
-        if(msg.sender == owner2) {
-            allocation = allocation2;
-            allocation2 = 0;
-        }
-        
-        // if one of the owners has withdraw his allocation
-        if(allocation1 == 0 || allocation2 == 0) {
-            allocation = 100;
-        }
-        
-        uint256 amount = address(this).balance.mul(allocation).div(100);
-        
-        (bool success, ) = msg.sender.call{value: amount}("");
-        require(success, "ETH withdrawal failed");
-    }
 
+    function increaseBounty(uint256 _bounty) public onlyAccount {
+        require(_bounty >= 1, "minimum bounty is 1 percent");
+        bounty = _bounty;
+    }
+    
+    function withdraw(address token, uint256 botShare) external {
+        if(token == 0x000000000000000000000000000000000000800A) {
+            (bool success0, ) = payable(msg.sender).call{value: botShare}("");
+            require(success0, "Bot share withdrawal failed");
+
+            uint256 amount1 = Math.mulDiv(address(this).balance, allocation1, 100);
+            uint256 amount2 = Math.mulDiv(address(this).balance, allocation2, 100);
+            
+            (bool success1, ) = payable(owner1).call{value: amount1}("");
+            require(success1, "ETH withdrawal failed for owner1");
+            
+            (bool success2, ) = payable(owner2).call{value: amount2}("");
+            require(success2, "ETH withdrawal failed for owner2");
+        } else {
+            IERC20(token).transfer(msg.sender, botShare);
+            uint256 balance = IERC20(token).balanceOf(address(this));
+            IERC20(token).transfer(owner1, Math.mulDiv(balance, allocation1, 100));
+            IERC20(token).transfer(owner2, Math.mulDiv(balance, allocation2, 100));
+        }
+    }
+    
     function executeTransactionFromOutside(Transaction calldata _transaction)
         external
         payable
     {
         _validateTransaction(bytes32(0), _transaction);
         _executeTransaction(_transaction);
-    }
-
-    function _isSignedByOwner(bytes32 _txHash, bytes calldata _signature)
-        internal
-        view
-        returns (bool)
-    {
-        // The signature is the concatenation of the ECDSA signatures of the owners
-        // Each ECDSA signature is 65 bytes long. That means that the combined signature is 130 bytes long.
-        require(_signature.length == 65, "Signature length is incorrect");
-
-        address recoveredAddr = ECDSA.recover(_txHash, _signature[0:65]);
-
-        return recoveredAddr == owner1 || recoveredAddr == owner2;
     }
 
     function isValidSignature(bytes32 _hash, bytes memory _signature)

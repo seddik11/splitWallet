@@ -3,38 +3,39 @@ import * as ethers from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { Deployer } from "@matterlabs/hardhat-zksync-deploy";
 
-export default async function (hre: HardhatRuntimeEnvironment) {
+const FACTORY_ADDRESS = "0xbB89aF8bF49680f155c6Ce94743828bA293F3957";
+const TOKEN_ADDRESS = "0x3e7676937A7E96CFB7616f255b9AD9FF47363D4b";
+
+ async function deployAA (hre: HardhatRuntimeEnvironment) {
   const provider = new Provider(hre.config.networks.zkSyncTestnet.url);
   
   const wallet = new Wallet("0xcc1149669c0f288ae228c316d93a8fd39b766a7d5ac3f41054f74e4ee7f1a09c").connect(provider);
   
   const deployer = new Deployer(hre, wallet);
-  const deployAllocationArtifact = await deployer.loadArtifact("AllocationContract");
-  const allocationArtifact = await hre.artifacts.readArtifact("AllocationContract");
+  const deployAllocationArtifact = await deployer.loadArtifact("SplitWallet");
+  const allocationArtifact = await hre.artifacts.readArtifact("SplitWallet");
   const daiArtifact = await hre.artifacts.readArtifact("@matterlabs/zksync-contracts/l2/system-contracts/openzeppelin/token/ERC20/IERC20.sol:IERC20");
 
   const L2_ETH_TOKEN_ADDRESS = '0x000000000000000000000000000000000000800A';
   
-  console.log(`Deploying Facotry...`);
+  // console.log(`Deploying Facotry...`);
   
   const factoryArtifact = await deployer.loadArtifact('AAFactory');
-  const bytecodeHash = utils.hashBytecode(deployAllocationArtifact.bytecode);
+  // const bytecodeHash = utils.hashBytecode(deployAllocationArtifact.bytecode);
   
-  const factory = await deployer.deploy(
-    factoryArtifact,
-    [bytecodeHash],
-    undefined,
-    [
-      // Since the factory requires the code of the multisig to be available,
-      // we should pass it here as well.
-      deployAllocationArtifact.bytecode,
-    ]
-  );
+  // const factory = await deployer.deploy(
+  //   factoryArtifact,
+  //   [bytecodeHash],
+  //   undefined,
+  //   [
+  //     deployAllocationArtifact.bytecode,
+  //   ]
+  // );
 
-  console.log(`AA factory address: ${factory.address}`);
+  // console.log(`AA factory address: ${factory.address}`);
 
   const aaFactory = new ethers.Contract(
-    factory.address,
+    FACTORY_ADDRESS,
     factoryArtifact.abi,
     wallet
   );
@@ -60,7 +61,7 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   // Getting the address of the deployed contract account
   const abiCoder = new ethers.utils.AbiCoder();
   const multisigAddress = utils.create2Address(
-    factory.address,
+    FACTORY_ADDRESS,
     await aaFactory.aaBytecodeHash(),
     salt,
     abiCoder.encode(['address', 'address', 'uint256', 'uint256'], [owner1.address, owner2.address, 70, 30])
@@ -81,90 +82,41 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 
   console.log(`Before Sending Eth: owner1 and owner 2 balance ${owner1Balance} ${owner2Balance}`);
 
-  await daiWallet.transfer(multisigAddress, ethers.utils.parseEther("0.01"));
+  await daiWallet.transfer(multisigAddress, ethers.utils.parseEther("0.001"));
   
-  let multiBalance = await daiWallet.balanceOf(multisigAddress);
-  console.log(`Multisig dai balance ${multiBalance}`);
+  let multiDaiBalance = await daiWallet.balanceOf(multisigAddress);
+  console.log(`Multisig dai balance ${multiDaiBalance}`);
+
+  let multiEthBalance = await provider.getBalance(multisigAddress);
+  console.log(`Multisig eth balance is ${multiEthBalance.toString()}`);
   
-  const allocationWallet = new ethers.Contract(
-    multisigAddress,
-    allocationArtifact.abi,
-    wallet
-  );
-
-  console.log("Sending fees funds to multisig account");
-  // Send funds to the multisig account we just deployed
-  const ethTx = await (
-    await wallet.sendTransaction({
-      to: multisigAddress,
-      // You can increase the amount of ETH sent to the multisig
-      value: ethers.utils.parseEther("0.01"),
-    })
-  ).wait();
-
-  let multisigBalance = await provider.getBalance(multisigAddress);
-
-  console.log(`Eth trx: ${ethTx}`);
-  console.log(`Multisig eth balance is ${multisigBalance.toString()}`);
-  
-  console.log('Sending funds from multisig..');
-
-  // Transaction to end offer
-  // let aaTx = await daiWallet.populateTransaction.transfer(
-  //   owner1.address,
-  //   ethers.utils.parseEther("0.00035")
+  // const allocationWallet = new ethers.Contract(
+  //   multisigAddress,
+  //   allocationArtifact.abi,
+  //   wallet
   // );
 
-  // const gasPrice = await provider.getGasPrice();
+  // let multisigBalance = await provider.getBalance(multisigAddress);
 
-  // aaTx = {
-  //   ...aaTx,
-  //   from: multisigAddress,
-  //   gasLimit: ethers.utils.parseEther("0.00000000002"),
-  //   gasPrice: gasPrice,
-  //   chainId: (await provider.getNetwork()).chainId,
-  //   nonce: await provider.getTransactionCount(multisigAddress),
-  //   type: 113,
-  //   customData: {
-  //     gasPerPubdata: utils.DEFAULT_GAS_PER_PUBDATA_LIMIT,
-  //   } as types.Eip712Meta,
-  //   value: ethers.BigNumber.from(0),
-  // };
-  // const signedTxHash = EIP712Signer.getSignedDigest(aaTx);
-
-  // const multiSignature = ethers.utils.concat([
-  //   // Note, that `signMessage` wouldn't work here, since we don't want
-  //   // the signed hash to be prefixed with `\x19Ethereum Signed Message:\n`
-  //   ethers.utils.joinSignature(owner1._signingKey().signDigest(signedTxHash)),
-  //   ethers.utils.joinSignature(owner2._signingKey().signDigest(signedTxHash)),
-  // ]);
-
-  // aaTx.customData = {
-  //   ...aaTx.customData,
-  //   customSignature: multiSignature,
-  // };
-
-  // console.log(
-  //   `The multisig's nonce before the first tx is ${await provider.getTransactionCount(
-  //     multisigAddress
-  //   )}`
-  // );
-
-  // console.log(aaTx);
-
-  // const sentTx = await provider.sendTransaction(utils.serialize(aaTx));
-  // await sentTx.wait();
+  // console.log(`Multisig eth balance is ${multisigBalance.toString()}`);
   
-  const trx = await allocationWallet.forward('0x3e7676937A7E96CFB7616f255b9AD9FF47363D4b');
-  // console.log(trx);
-  
-  owner1Balance = await daiWallet.balanceOf(owner1.address);
-  owner2Balance = await daiWallet.balanceOf(owner2.address);
-  console.log(`After forwarding Eth: owner1 and owner 2 balance ${owner1Balance.toString()} ${owner2Balance.toString()}`);
+  // console.log('Sending funds from multisig..');
 
-  multiBalance = await daiWallet.balanceOf(multisigAddress);
-  console.log(`Multisig dai balance ${multiBalance.toString()}`);
+  // await allocationWallet.withdraw('0x3e7676937A7E96CFB7616f255b9AD9FF47363D4b');
   
-  multiBalance = await provider.getBalance(multisigAddress);
-  console.log(`After forwarding Eth: Multisig account balance ${multiBalance.toString()}`);
+  // owner1Balance = await daiWallet.balanceOf(owner1.address);
+  // owner2Balance = await daiWallet.balanceOf(owner2.address);
+  // console.log(`After forwarding Eth: owner1 and owner 2 balance ${owner1Balance.toString()} ${owner2Balance.toString()}`);
+
+  // multiBalance = await daiWallet.balanceOf(multisigAddress);
+  // console.log(`Multisig dai balance ${multiBalance.toString()}`);
 }
+
+export default async function (hre: HardhatRuntimeEnvironment) {
+  // 1. deploy AA factory and multisig account
+  await deployAA(hre);
+
+  // 3. use Paymaster to pat transaction fees to split and withdraw funds
+  // DAI 0x07bd5ed37a946e4c54f1efb26f013245406fbf760ded5db962a9ce054570aa28
+}
+
