@@ -37,6 +37,31 @@ This means that the executor can stake their own ETH in the liquidity pool and e
 
 ![workflow model](https://i.ibb.co/m6VxNsj/Miner-Paymaster.jpg)
 
+### Description
+
+0.
+- users will deploy a multisig wallet with a specific bounty amount
+- A paymaster is deployed with specific strategy (for example: bounty equal to 1% or greeter)
+The strategy model is open and can be based on bounty amount, on number of transaction, execution time (gas fees are cheeper at night for example) etc..
+- A transaction executor has added this wallet to his list (When the WithdrawEvent is triggered) is listening for transfer events of ERC20 token (DAI for example).
+  The executor could select which transaction bounty fit better the Paymaster strategy (of course we could have multiple Paymasters with different Strategies etc..)
+
+1.
+- When the sender will transfer funds to the Split Wallet A transfer event will be emitted from the blockchain
+
+2.
+- The executor will detect this and start a withdraw transaction via the Paymaster
+
+3.
+- The Paymaster will verify and validate the transaction to pay the gas fees (verify if withdraw transaction is in accordance with Paymaster strategy)
+
+4.
+- After the transaction was successful the wallet owners will receive their funds based on their allocations and the Paymaster will receive the bounty (in our example must include transaction fees)
+- In turn the paymaster will update the rewards balance for the executor and the total rewards gained
+
+5.
+- LPs could supply Eth and claim their rewards any time
+
 ## Conclusion
 
 This approach offers several benefits and opportunities for different actors within the Ethereum ecosystem. By streamlining fund distribution and providing incentives for participation, this innovative solution fosters growth and collaboration in the ecosystem. showcasing the potential of Account Abstraction and Paymasters and their application in facilitating growth, sustainibility and create new opportunities for actors within the ecosystem.
