@@ -33,6 +33,10 @@ One notable advantage of this arrangement is that the executor doesn't necessari
 
 This means that the executor can stake their own ETH in the liquidity pool and earn rewards alongside other LPs. In this way, the executor can benefit from both the bounty and any additional rewards provided by the liquidity pool, thereby maximizing their potential earnings. This executor will earn a reward for executing the transaction.
 
+## Workflow
+
+![workflow model](https://i.ibb.co/m6VxNsj/Miner-Paymaster.jpg)
+
 ## Conclusion
 
 This approach offers several benefits and opportunities for different actors within the Ethereum ecosystem. By streamlining fund distribution and providing incentives for participation, this innovative solution fosters growth and collaboration in the ecosystem. showcasing the potential of Account Abstraction and Paymasters and their application in facilitating growth, sustainibility and create new opportunities for actors within the ecosystem.
