@@ -12,7 +12,7 @@ interface IWithdraw {
     function withdraw(address token) external;
 
     /**
-     * @dev withdraw funds to the wallet owners based on their allocations
+     * @dev Returns the amount of bounty
      */
     function getBounty() external view returns (uint256);
 }
