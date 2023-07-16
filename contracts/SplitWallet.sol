@@ -5,7 +5,6 @@ import "@matterlabs/zksync-contracts/l2/system-contracts/interfaces/IAccount.sol
 import "@matterlabs/zksync-contracts/l2/system-contracts/libraries/TransactionHelper.sol";
 
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@matterlabs/zksync-contracts/l2/system-contracts/openzeppelin/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
@@ -20,7 +19,7 @@ import "@matterlabs/zksync-contracts/l2/system-contracts/libraries/SystemContrac
 // Split wallet must implement withdraw interface
 import "./IWithdraw.sol";
 
-contract SplitWallet is IAccount, IERC1271 {
+contract SplitWallet is IAccount, IERC1271, IWithdraw {
     // to get transaction hash
     using TransactionHelper for Transaction;
 
@@ -29,7 +28,6 @@ contract SplitWallet is IAccount, IERC1271 {
     address public owner2;
     uint256 public allocation1; // in percentage
     uint256 public allocation2;
-    address public botManager;
     uint256 public bounty;
 
     bytes4 constant EIP1271_SUCCESS_RETURN_VALUE = 0x1626ba7e;
@@ -51,13 +49,11 @@ contract SplitWallet is IAccount, IERC1271 {
         _;
     }
 
-    constructor(address _owner1, address _owner2, address _botManager, uint256 _allocation1, uint256 _allocation2, uint256 _bounty) {
+    constructor(address _owner1, address _owner2, uint256 _allocation1, uint256 _allocation2, uint256 _bounty) {
         owner1 = _owner1;
         owner2 = _owner2;
         allocation1 = _allocation1;
         allocation2 = _allocation2;
-        botManager = _botManager;
-        require(_bounty >= 1, "minimum bounty is 1 percent");
         bounty = _bounty;
     }
 
@@ -133,14 +129,18 @@ contract SplitWallet is IAccount, IERC1271 {
         }
     }
 
-    function increaseBounty(uint256 _bounty) public onlyAccount {
-        require(_bounty >= 1, "minimum bounty is 1 percent");
+    function updateBounty(uint256 _bounty) public onlyAccount {
         bounty = _bounty;
     }
+
+    // increasing the bounty will always increase the likelihood of execution of the transaction
+    function getBounty() external view returns (uint256) {
+        return bounty;
+    }
     
-    function withdraw(address token, uint256 botShare) external {
+    function withdraw(address token) external {
         if(token == 0x000000000000000000000000000000000000800A) {
-            (bool success0, ) = payable(msg.sender).call{value: botShare}("");
+            (bool success0, ) = payable(msg.sender).call{value: bounty}("");
             require(success0, "Bot share withdrawal failed");
 
             uint256 amount1 = Math.mulDiv(address(this).balance, allocation1, 100);
@@ -152,7 +152,7 @@ contract SplitWallet is IAccount, IERC1271 {
             (bool success2, ) = payable(owner2).call{value: amount2}("");
             require(success2, "ETH withdrawal failed for owner2");
         } else {
-            IERC20(token).transfer(msg.sender, botShare);
+            IERC20(token).transfer(msg.sender, bounty);
             uint256 balance = IERC20(token).balanceOf(address(this));
             IERC20(token).transfer(owner1, Math.mulDiv(balance, allocation1, 100));
             IERC20(token).transfer(owner2, Math.mulDiv(balance, allocation2, 100));

@@ -16,7 +16,8 @@ contract AAFactory {
         address owner1,
         address owner2,
         uint256 allocation1,
-        uint128 allocation2
+        uint256 allocation2,
+        uint256 bounty
     ) external returns (address accountAddress) {
         (bool success, bytes memory returnData) = SystemContractsCaller
             .systemCallWithReturndata(
@@ -25,7 +26,7 @@ contract AAFactory {
                 uint128(0),
                 abi.encodeCall(
                     DEPLOYER_SYSTEM_CONTRACT.create2Account,
-                    (salt, aaBytecodeHash, abi.encode(owner1, owner2, allocation1, allocation2), IContractDeployer.AccountAbstractionVersion.Version1)
+                    (salt, aaBytecodeHash, abi.encode(owner1, owner2, allocation1, allocation2, bounty), IContractDeployer.AccountAbstractionVersion.Version1)
                 )
             );
         require(success, "Deployment failed");

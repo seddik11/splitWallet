@@ -21,9 +21,4 @@ contract BotAllowance {
     function addBot(address bot) public onlyOwner {
         bots[bot] = true;
     }
-
-    function increaseAllowance(uint256 amount) public {
-        require(bots[msg.sender], "Only bots can call this function");
-        token.increaseAllowance(msg.sender, amount);
-    }
 }

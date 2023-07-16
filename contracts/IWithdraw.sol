@@ -10,4 +10,9 @@ interface IWithdraw {
      * @dev withdraw funds to the wallet owners based on their allocations
      */
     function withdraw(address token) external;
+
+    /**
+     * @dev withdraw funds to the wallet owners based on their allocations
+     */
+    function getBounty() external view returns (uint256);
 }

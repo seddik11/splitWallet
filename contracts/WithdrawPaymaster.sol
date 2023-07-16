@@ -9,11 +9,16 @@ import {TransactionHelper, Transaction} from "@matterlabs/zksync-contracts/l2/sy
 
 import "@matterlabs/zksync-contracts/l2/system-contracts/Constants.sol";
 import "./IWithdraw.sol";
-import "./BotAllowance.sol";
 
 contract WithdrawPaymaster is IPaymaster {
     address public allowedToken;
-    address public feesPool;
+    mapping(address => uint256) public balances;
+    uint256 totalSupply;
+    struct Strategy {
+        uint256 bounty;
+    }
+
+    Strategy public strategy;
 
     modifier onlyBootloader() {
         require(
@@ -24,9 +29,25 @@ contract WithdrawPaymaster is IPaymaster {
         _;
     }
 
-    constructor(address _erc20, _feesPool) {
+    constructor(address _erc20, uint256 bounty) {
         allowedToken = _erc20;
-        feesPool = _feesPool;
+        strategy = Strategy(bounty);
+    }
+
+    function supply() external payable {
+        balances[msg.sender] += msg.value;
+        totalSupply += msg.value;
+    }
+
+    function claim() external {
+        // calculate rewards for this user which are proportial to the amount of Eth staked
+        uint256 rewards = (address(this).balance - totalSupply) / balances[msg.sender];
+        (bool success, ) = payable(msg.sender).call{value: rewards}("");
+        require(success, "Bot share withdrawal failed");
+    }
+
+    function executeWithdraw(address walletAddress) public {
+        IWithdraw(walletAddress).withdraw(allowedToken);
     }
 
     function validateAndPayForPaymasterTransaction(
@@ -49,72 +70,35 @@ contract WithdrawPaymaster is IPaymaster {
         bytes4 paymasterInputSelector = bytes4(
             _transaction.paymasterInput[0:4]
         );
-        if (paymasterInputSelector == IPaymasterFlow.approvalBased.selector) {
-            // While the transaction data consists of address, uint256 and bytes data,
-            // the data is not needed for this paymaster
-            (address token, uint256 amount, bytes memory data) = abi.decode(
-                _transaction.paymasterInput[4:],
-                (address, uint256, bytes)
-            );
+        if (paymasterInputSelector == IPaymasterFlow.general.selector) {
+            // get wallet address
+            bytes memory addressBytes = new bytes(32);
+            for (uint256 i = 0; i < 32; i++) {
+                addressBytes[i] = _transaction.data[i + 4];
+            }
 
-            // Verify if token is the correct one
-            require(token == allowedToken, "Invalid token");
-
-            // We verify that the user has provided enough allowance
-            address userAddress = address(uint160(_transaction.from));
-
-            address thisAddress = address(this);
+            address walletAddress = abi.decode(addressBytes, (address));
 
             // Note, that while the minimal amount of ETH needed is tx.gasPrice * tx.gasLimit,
             // neither paymaster nor account are allowed to access this context variable.
             uint256 requiredETH = _transaction.gasLimit *
                 _transaction.maxFeePerGas;
 
-            uint256 walletBalance = IERC20(token).balanceOf(
-                userAddress
+            uint256 walletBalance = IERC20(allowedToken).balanceOf(
+                walletAddress
             );
 
-            uint256 providedAllowance = IERC20(token).allowance(
-                userAddress,
-                thisAddress
-            );
-
-            // calculate if balance covers transaction fees + 1% bounty
-            // for simplicity we suppose Eth and ERC20 token prices are 1 (we can use API3 to get real data)
+            // calculate if balance covers transaction fees + bounty amount specified in the Strategy of this Paymaster
+            // for simplicity we suppose Eth and ERC20 token prices are 1 (use API3 to get real data)
             uint256 requiredERC20 = (requiredETH * 1)/1;
-            uint256 requiredBalance = requiredERC20 * 101 / 100;
+            uint256 bountyAmount = (walletBalance - requiredERC20) * strategy.bounty / 100; // bounty amount after paying fees
+            uint256 requiredBalance = requiredERC20 + bountyAmount;
+            uint256 bounty = IWithdraw(walletAddress).getBounty();
 
             require(
-                walletBalance >= requiredBalance,
-                "Balance too low"
+                bounty >= requiredBalance,
+                "Bounty is too low"
             );
-            
-            require(
-                providedAllowance >= requiredBalance,
-                "Min allowance too low"
-            );
-
-            BotAllowance(feesPool).increaseAllowance(requiredBalance);
-
-            try
-                IERC20(token).transferFrom(userAddress, thisAddress, requiredBalance)
-            {} catch (bytes memory revertReason) {
-                // If the revert reason is empty or represented by just a function selector,
-                // we replace the error with a more user-friendly message
-                if (revertReason.length <= 4) {
-                    revert("Failed to transferFrom from users' account");
-                } else {
-                    assembly {
-                        revert(add(0x20, revertReason), mload(revertReason))
-                    }
-                }
-            }
-
-            try
-                IWithdraw(userAddress).withdraw(token)
-            {} catch (bytes memory revertReason) {
-                    revert("Failed to transferFrom from users' account");
-            }
 
             // The bootloader never returns any data, so it can safely be ignored here.
             (bool success, ) = payable(BOOTLOADER_FORMAL_ADDRESS).call{
