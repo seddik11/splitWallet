@@ -22,7 +22,7 @@ On the other hand, we introduce another set of actors called "Subsidizers" who a
 
 In order to incentivize Liquidity Providers (LPs) to stake their ETH for paying transactions, rewards or incentives to LPs can be offered in the form of APYs (Annual Percentage Yields) or APRs (Annual Percentage Rates). These rewards can be structured in different ways, such as a percentage bounty from the withdrawn amount or a combination of the transaction fees paid for the transaction and additional rewards.
 By offering different strategies and APYs/APRs for Paymasters, they can attract diverse range of LPs with varying risk-reward preferences. LPs can choose the strategy that aligns with their investment goals and contribute their ETH to the Paymasters to earn rewards.
-This approach opens up possibilities for a dynamic ecosystem where multiple Paymasters with different strategies compete for LPs, fostering liquidity provision and providing opportunities for LPs to earn rewards for their participation.
+This approach opens up possibilities for a dynamic ecosystem where multiple Paymasters with different strategies compete for LPs, fostering liquidity provision and providing opportunities for LPs to earn rewards for their participation. Like in AMMs, LPs earn revenue by providing liquidity.
 
 #### 2.2.1 Transaction executor
 
@@ -73,6 +73,10 @@ This is a multiSig wallet where owners will specify the allocation for each owne
 
 There are various ways to implement the Paymaster, and it can be a complex process that involves incorporating multiple feature. For this example, we implemented a Paymaster that support only one ERC20 and has a simple strategy (bounty must be equal or greeter than 1). It defines also a map to track LPs balances and Eth supplied. For executors, to execute the withdraw via the Paymaster they must call executeWithdraw specifying the wallet address. Before Paying the transaction fees, the Paymaster will verify the transaction and if its alighed with its Strategy. The executor will receive a small reward for executing the transaction.
 
+### NB
+
+Note: This implementation is intended as an experimental proof-of-concept and should not be used in production environments. It has not been audited for security vulnerabilities, and may contain bugs or errors that could result in the loss of funds. Additionally, the code quality may not meet industry standards, and the mathematical calculations used to determine the APY may not be exact.
+
 
 ## Running the scenario
 
@@ -84,5 +88,5 @@ Then this wallet will receive 0.5 Dai. The executor will detect this event and w
 
 ## Conclusion
 
-This approach offers several benefits and opportunities for different actors within the Ethereum ecosystem. By streamlining fund distribution and providing incentives for participation, this innovative solution fosters growth and collaboration in the ecosystem. showcasing the potential of Account Abstraction and Paymasters and their application in facilitating growth, sustainibility and create new opportunities for actors within the ecosystem.
+This approach offers several benefits and opportunities for different actors within the Ethereum ecosystem. By streamlining fund distribution and providing incentives for participation, this innovative solution fosters growth and collaboration in the ecosystem. showcasing the potential of Account Abstraction and Paymasters and their application in facilitating growth, sustainibility and create new opportunities for actors within the ecosystem. We are confident that this model can be adapted to various forms and extended to numerous use cases and applications, such as publishers and advertisers.
 

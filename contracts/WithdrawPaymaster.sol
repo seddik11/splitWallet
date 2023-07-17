@@ -29,6 +29,8 @@ contract WithdrawPaymaster is IPaymaster {
         _;
     }
 
+    uint constant EXECUTOR_BOUNTY = 1000000000;
+
     constructor(address _erc20, uint256 bounty) {
         allowedToken = _erc20;
         strategy = Strategy(bounty);
@@ -48,6 +50,9 @@ contract WithdrawPaymaster is IPaymaster {
 
     function executeWithdraw(address walletAddress) public {
         IWithdraw(walletAddress).withdraw(allowedToken);
+        // send bounty to the executor
+        (bool success, ) = payable(msg.sender).call{value: EXECUTOR_BOUNTY}("");
+        require(success, "Executor bounty failed");
     }
 
     function validateAndPayForPaymasterTransaction(
