@@ -16,7 +16,7 @@ The Split Wallet utilizes Account Abstraction to create a multisig wallet for si
 
 ### 2.2 Subsidizers (Paymasters)
 
-On the other hand, we introduce another set of actors called "Subsidizers" who are Paymaster contracts responsible for executing the withdraw transactions and earning the bounty. These Subsidizers play a vital role in facilitating the transaction process and are incentivized by the bounty offered for executing the withdrawals. By actively participating in the ecosystem, Miners contribute to the efficient and seamless distribution of funds while earning rewards for their valuable service.
+On the other hand, we introduce another set of actors called "Subsidizers" who are Paymaster contracts responsible for executing the withdraw transactions and earning the bounty. These Subsidizers play a vital role in facilitating the transaction process and are incentivized by the bounty offered for executing the withdrawals. By actively participating in the ecosystem, Subsidizers contribute to the efficient and seamless distribution of funds while earning rewards for their valuable service.
 
 #### 2.2.1 Liquidity Providers
 
@@ -31,7 +31,7 @@ This means that the executor can stake their own ETH in the liquidity pool and e
 
 ## Workflow
 
-![workflow model](https://i.ibb.co/m6VxNsj/Miner-Paymaster.jpg)
+![workflow model](https://i.ibb.co/jhvPnfG/Miner-Paymaster.jpg)
 
 ### Description
 
@@ -62,7 +62,24 @@ The strategy model is open and can be based on bounty amount, on number of trans
 
 ### IWithdraw interface
 
+This interface defines an event WithdrawBounty when an account implementing this is deployed
+The other two functions are the withdraw function and getBounty
 
+### SplitWallet (IAccount)
+
+This is a multiSig wallet where owners will specify the allocation for each owner and bounty amount (for this example we used only two owners but it can be extended for multiple owners). The wallet can be used for Eth or any ERC20 token (we use Dai for this example)
+
+### WithdrawPaymaster (Paymaster)
+
+There are various ways to implement the Paymaster, and it can be a complex process that involves incorporating multiple feature. For this example, we implemented a Paymaster that support only one ERC20 and has a simple strategy (bounty must be equal or greeter than 1). It defines also a map to track LPs balances and Eth supplied. For executors, to execute the withdraw via the Paymaster they must call executeWithdraw specifying the wallet address. Before Paying the transaction fees, the Paymaster will verify the transaction and if its alighed with its Strategy. The executor will receive a small reward for executing the transaction.
+
+
+## Running the scenario
+
+We have implemented a scenario where two owners will create a multiSig wallet with those specifications (70% owner1 allocation, 30% owner2 allocation, 1% bounty: after paying gas fees)
+Then this wallet will receive 0.5 Dai. The executor will detect this event and will use the Subsidizer to execute the withdraw transaction.
+
+`yarn hardhat deploy-zksync --script deploy/scenario.ts`
 
 
 ## Conclusion
