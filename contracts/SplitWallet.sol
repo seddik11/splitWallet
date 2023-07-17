@@ -31,7 +31,7 @@ contract SplitWallet is IAccount, IERC1271, IWithdraw {
     uint256 public bounty;
 
     bytes4 constant EIP1271_SUCCESS_RETURN_VALUE = 0x1626ba7e;
-    
+
     modifier onlyBootloader() {
         require(
             msg.sender == BOOTLOADER_FORMAL_ADDRESS,
@@ -55,6 +55,7 @@ contract SplitWallet is IAccount, IERC1271, IWithdraw {
         allocation1 = _allocation1;
         allocation2 = _allocation2;
         bounty = _bounty;
+        emit WithdrawBounty(address(this), bounty);
     }
 
     function validateTransaction(

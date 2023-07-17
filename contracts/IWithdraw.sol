@@ -6,6 +6,12 @@ pragma solidity ^0.8.0;
  */
 interface IWithdraw {
 
+     /**
+     * @dev Emitted when `account` is deployed with `bounty` amount
+     * 
+     */
+    event WithdrawBounty(address account, uint256 bounty);
+
     /**
      * @dev withdraw funds to the wallet owners based on their allocations
      */
