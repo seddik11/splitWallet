@@ -62,8 +62,7 @@ The strategy model is open and can be based on bounty amount, on number of trans
 
 ### IWithdraw interface
 
-This interface defines an event WithdrawBounty when an account implementing this is deployed
-The other two functions are the withdraw function and getBounty
+The interface establishes an event called "WithdrawBounty" that is triggered when an account, which implements this interface, is deployed. Additionally, the interface includes two other essential functions: "withdraw" and "getBounty."
 
 ### SplitWallet (IAccount)
 
@@ -84,6 +83,14 @@ We have implemented a scenario where two owners will create a multiSig wallet wi
 Then this wallet will receive 0.5 Dai. The executor will detect this event and will use the Subsidizer to execute the withdraw transaction.
 
 `yarn hardhat deploy-zksync --script deploy/scenario.ts`
+
+## Challenges
+
+### Gas estimation
+
+We can envision a user experience where the owners have the ability to select the bounty using a slider. The minimum value on the slider would represent the estimated gas fees required to execute the transaction. Increasing the value above this minimum would enhance the chances of the transaction being executed by Paymasters.
+
+So I tried to estimate the gas fees needed for the executeWithdraw function in Paymaster but received this error `{"jsonrpc":"2.0","error":{"code":3,"message":"failed paymaster validation. error message: Error function_selector = 0x4e487b71, data = 0x4e487b710000000000000000000000000000000000000000000000000000000000000011","data":"0x"},"id":45}`
 
 
 ## Conclusion
