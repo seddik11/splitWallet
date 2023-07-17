@@ -96,13 +96,18 @@ contract WithdrawPaymaster is IPaymaster {
             // calculate if balance covers transaction fees + bounty amount specified in the Strategy of this Paymaster
             // for simplicity we suppose Eth and ERC20 token prices are 1 (use API3 to get real data)
             uint256 requiredERC20 = (requiredETH * 1)/1;
-            uint256 bountyAmount = (walletBalance - requiredERC20) * strategy.bounty / 100; // bounty amount after paying fees
-            uint256 requiredBalance = requiredERC20 + bountyAmount;
-            uint256 bounty = IWithdraw(walletAddress).getBounty();
+            uint256 strategyBounty = (walletBalance - requiredERC20) * strategy.bounty / 100; // bounty amount after paying fees
+            uint256 requiredBalance = requiredERC20 + strategyBounty;
+            uint256 walletBounty = IWithdraw(walletAddress).getBounty();
 
             require(
-                bounty >= requiredBalance,
+                walletBounty >= requiredBalance,
                 "Bounty is too low"
+            );
+
+            require(
+                walletBounty <= walletBalance,
+                "Wallet balance too low to cover Tx fees and bounty"
             );
 
             // The bootloader never returns any data, so it can safely be ignored here.

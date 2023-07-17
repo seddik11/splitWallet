@@ -12,7 +12,7 @@ Imagine a scenario where a team participates in a hackathon and wins a prize. To
 
 ### 2.1 Split wallet (Account Abstraction)
 
-The Split Wallet utilizes Account Abstraction to create a multisig wallet for simplified fund distribution. With the ability to define allocations for team members and include a small bounty, owners can receive their funds without the hassle of sending ETH or paying gas fees. Additionally, other users, including smart contracts and individuals, can earn the bounty by executing the withdraw function (This account will implement the IWithdraw interface)
+The Split Wallet utilizes Account Abstraction to create a multisig wallet for simplified fund distribution. With the ability to define allocations for team members and include a small bounty, owners can receive their funds without the hassle of sending ETH or paying gas fees. Additionally, other users, including smart contracts and individuals, can earn the bounty by executing the withdraw function (This account will implement the IWithdraw interface). Increasing the bounty will increase the likelihood of execution of the transaction
 
 ### 2.2 Subsidizers (Paymasters)
 

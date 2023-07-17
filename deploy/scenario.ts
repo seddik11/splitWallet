@@ -35,12 +35,14 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   
   
   // 3.3 before deploying we need to estimate the bounty amount
-  // and more it's bigger more likely the transaction will be executed by profit-seekers
-  console.log(`Estimating the bounty amount including the gas fees needed to pay the transaction`);
+  // and more it's bigger more likely the transaction will be executed by Executors
+  // console.log(`Estimating the bounty amount including the gas fees needed to pay the transaction`);
   // const estimatedFee = await estimateWithdrawWithPaymaster(hre, paymasterAddress, estimationSplitWalletAddress);
-  // 3.4 we will add some amount to the fee amount as a bounty
   // const bounty  = ethers.BigNumber.from(estimatedFee).add(ethers.utils.parseEther("0.1"));
-  const bounty  = ethers.BigNumber.from(ethers.utils.parseEther("0.1")).add(ethers.utils.parseEther("0.1"));
+  
+  
+  // 3.4 we will add some amount to the fee amount as a bounty
+  const bounty  = ethers.BigNumber.from(ethers.utils.parseEther("0.1")).add(ethers.utils.parseEther("0.1")); // estimated fee + bounty
   console.log(`After estimation of gas fees and adding a small amount the bounty is ${bounty}`);
   
   const splitWalletAddress = await deployAccountSplitWallet(hre, walletPK, splitwalletFactoryAddress, owner1, owner2, bounty);
@@ -56,7 +58,7 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   console.log(`Supply Eth to paymaster by LPs so transaction fees could be paid`);
   await supplyEthToPaymaster(hre, paymasterAddress, walletPK);
   
-  // 5.2 the transfer event was detected by a profit-seeker and want to execute the withdraw with help of Paymaster
+  // 5.2 the transfer event was detected by an Executor and want to execute the withdraw via the Paymaster
   console.log(`-----------------------`);
   console.log(`Use paymaster to execute the withdraw transaction`);
   try {
